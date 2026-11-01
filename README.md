@@ -47,7 +47,7 @@ int main() {
 ### building:
 
 ```bash
-cmake -S . -B build -G ninja
+cmake -S . -B build -G Ninja
 cmake --build build
 
 # test it with

@@ -342,7 +342,7 @@ Result compressLh3(std::span<const Byte> input, const Options& options) {
     if (!characterTree.build(characterLengths) 
     ||  !positionTree.build(positionLengths)
     ) {
-        codecFailure(
+        return codecFailure(
             Error::InvalidInput,
             "Invalid static LH3 Huffman tables"
         );
@@ -411,7 +411,7 @@ Result decompressLh3(std::span<const Byte> input, std::uint64_t expectedSize, co
     BitReader reader(input);
     std::uint32_t tokenCount = 0;
     if (!reader.read(32, tokenCount) || tokenCount == 0 || tokenCount > expectedSize) {
-        codecFailure(
+        return codecFailure(
             Error::InvalidInput,
             "Invalid LH3 token count"
         );
@@ -422,7 +422,7 @@ Result decompressLh3(std::span<const Byte> input, std::uint64_t expectedSize, co
     if (!readLengths(reader, characterSymbols, characterLengths) 
     ||  !readLengths(reader, positionSymbols, positionLengths)
     ) {
-        codecFailure(
+        return codecFailure(
             Error::InvalidInput,
             "Truncated LH3 Huffman tables"
         );
@@ -433,7 +433,7 @@ Result decompressLh3(std::span<const Byte> input, std::uint64_t expectedSize, co
     if (!characterTree.build(characterLengths) 
     ||  !positionTree.build(positionLengths)
     ) {
-        codecFailure(
+        return codecFailure(
             Error::InvalidInput,
             "Invalid LH3 Huffman tables"
         );
@@ -479,7 +479,7 @@ Result decompressLh3(std::span<const Byte> input, std::uint64_t expectedSize, co
 
             std::uint32_t extra = 0;
             if (positionCode > 1 && !reader.read(static_cast<unsigned int>(positionCode - 1), extra)) {
-                codecFailure(
+                return codecFailure(
                     Error::InvalidInput,
                     "Truncated LH3 match distance"
                 );

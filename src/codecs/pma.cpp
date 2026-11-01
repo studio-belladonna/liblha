@@ -600,7 +600,7 @@ bool readPm1Copy(
 
 Result decodePm1(std::span<const Byte> input, std::uint64_t expectedSize, const Options& options) {
     if (!outputSizeAllowed(expectedSize, options)) {
-        codecFailure(
+        return codecFailure(
             Error::OutputLimitExceeded,
             "Expected output exceeds configured size limit"
         );
@@ -614,7 +614,7 @@ Result decodePm1(std::span<const Byte> input, std::uint64_t expectedSize, const 
     std::uint32_t treeIndex = 0;
 
     if (!reader.read(5, treeIndex) || treeIndex >= byteTrees.size()) {
-        codecFailure(
+        return codecFailure(
             Error::InvalidInput,
             "Invalid PM1 byte tree selector"
         );
@@ -631,7 +631,7 @@ Result decodePm1(std::span<const Byte> input, std::uint64_t expectedSize, const 
     while (output.size() < expectedSize) {
         std::uint32_t command = 0;
         if (!reader.read(1, command)) {
-            codecFailure(
+            return codecFailure(
                 Error::InvalidInput,
                 "Truncated PM1 command"
             );
@@ -653,11 +653,12 @@ Result decodePm1(std::span<const Byte> input, std::uint64_t expectedSize, const 
 
             for (unsigned int i = 0; i < count; ++i) {
                 Byte value = 0;
-                if (!readPm1Byte(reader, tree, history, value)) 
-                    codecFailure(
+                if (!readPm1Byte(reader, tree, history, value)) {
+                    return codecFailure(
                         Error::InvalidInput,
                         "Truncated PM1 literal block"
                     );
+                }
                 
                 output.push_back(value);
                 window[windowPosition] = value;
@@ -725,7 +726,7 @@ Result decodePm2(std::span<const Byte> input, std::uint64_t expectedSize, const 
             }
 
             if (!decoder.output(decoder.history.at(historyIndex), output)) {
-                codecFailure(
+                return codecFailure(
                     Error::InvalidInput,
                     "Invalid PM2 tree rebuild"
                 );
@@ -742,7 +743,7 @@ Result decodePm2(std::span<const Byte> input, std::uint64_t expectedSize, const 
             ) {
                 // prop it
             } else {
-                codecFailure(
+                return codecFailure(
                     Error::InvalidInput,
                     "Invalid PM2 copy length"
                 );
@@ -752,7 +753,7 @@ Result decodePm2(std::span<const Byte> input, std::uint64_t expectedSize, const 
             if (copyCode == 0) {
                 std::uint32_t value = 0;
                 if (!reader.read(6, value)) {
-                    codecFailure(
+                    return codecFailure(
                         Error::InvalidInput,
                         "Truncated PM2 copy offset"
                     );
@@ -762,7 +763,7 @@ Result decodePm2(std::span<const Byte> input, std::uint64_t expectedSize, const 
             } else if (copyCode < 20) {
                 unsigned int offsetCode = 0;
                 if (!decoder.offsets.decode(reader, offsetCode)) {
-                    codecFailure(
+                    return codecFailure(
                         Error::InvalidInput,
                         "Invalid PM2 copy offset code"
                     );
@@ -771,7 +772,7 @@ Result decodePm2(std::span<const Byte> input, std::uint64_t expectedSize, const 
                 const unsigned int bits = offsetCode == 0 ? 6 : offsetCode + 5;
                 std::uint32_t value = 0;
                 if (!reader.read(bits, value)) {
-                    codecFailure(
+                    return codecFailure(
                         Error::InvalidInput,
                         "Truncated PM2 copy offset"
                     );
@@ -781,7 +782,7 @@ Result decodePm2(std::span<const Byte> input, std::uint64_t expectedSize, const 
             }
 
             if (count == 0 || count > 256 || count > expectedSize - output.size()) {
-                codecFailure(
+                return codecFailure(
                     Error::SizeMismatch,
                     "Invalid PM2 copy length"
                 );
@@ -793,7 +794,7 @@ Result decodePm2(std::span<const Byte> input, std::uint64_t expectedSize, const 
                 const Byte value = decoder.window[source];
                 source = (source + 1) % decoder.window.size();
                 if (!decoder.output(value, output)) {
-                    codecFailure(
+                    return codecFailure(
                         Error::InvalidInput,
                         "Invalid PM2 tree rebuild"
                     );
@@ -819,7 +820,7 @@ Result decompressPm0(std::span<const Byte> input, std::uint64_t expectedSize, co
 
 Result compressPm1(std::span<const Byte> input, const Options &options) {
     if (!outputSizeAllowed(input.size(), options))
-        codecFailure(
+        return codecFailure(
             Error::OutputLimitExceeded,
             "Input exceeds configured size limit"
         );
@@ -841,7 +842,7 @@ Result compressPm1(std::span<const Byte> input, const Options &options) {
         writePm1ByteBlockCount(writer, count);
         for (unsigned int i = 0; i < count; ++i) {
             if (!writePm1Byte(writer, tree, history, input[position++])) {
-                codecFailure(
+                return codecFailure(
                     Error::InvalidInput,
                     "Unable to encode PM1 literal"
                 );
@@ -864,7 +865,7 @@ Result decompressPm1(std::span<const Byte> input, std::uint64_t expectedSize, co
 
 Result compressPm2(std::span<const Byte> input, const Options &options) {
     if (!outputSizeAllowed(input.size(), options))
-        codecFailure(
+        return codecFailure(
             Error::OutputLimitExceeded,
             "Input exceeds configured size limit"
         );
@@ -892,7 +893,7 @@ Result compressPm2(std::span<const Byte> input, const Options &options) {
 
         writer.write(3, static_cast<std::uint32_t>(code));
         if (!writeRange(writer, pm2HistoryRanges, static_cast<unsigned int>(code), depth))
-            codecFailure(
+            return codecFailure(
                 Error::InvalidInput,
                 "Unable to encode PM2 history byte"
             );
